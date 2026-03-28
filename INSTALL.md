@@ -223,9 +223,40 @@ Sample response:
 
 ## Deploy
 
-1. Create a Supabase project.
-2. Add the environment variables to Vercel.
-3. Deploy the app from GitHub or Vercel CLI.
+Trustgate's backend deploys from the repository root as a Vercel serverless function. The Fastify app is exposed through [`api/index.ts`](./api/index.ts), and [`vercel.json`](./vercel.json) rewrites `/health`, `/reports`, `/rankings`, and `/apis/:apiId` to that entrypoint.
+
+1. Create a Supabase project and create the `reports` table from the schema in [`trustgate_design_refresh/supabase_schema.sql`](./trustgate_design_refresh/supabase_schema.sql).
+2. Import this repository into Vercel as a separate backend project with the root directory set to the repository root.
+3. In Vercel project settings, use:
+   - Framework Preset: `Other`
+   - Install Command: `npm install`
+   - Build Command: `npm run build`
+   - Output Directory: leave empty
+4. Add these environment variables in Vercel for `Production`, `Preview`, and `Development` as needed:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_ANON_KEY` only if you intentionally want to use it as the fallback key instead of the service role key
+5. Deploy from GitHub or with the Vercel CLI:
+
+```bash
+vercel
+vercel --prod
+```
+
+6. Verify the deployed backend responds before wiring agents or the frontend:
+
+```bash
+curl "https://your-backend-domain.vercel.app/health"
+curl "https://your-backend-domain.vercel.app/rankings?category=weather"
+```
+
+The health check should return:
+
+```json
+{
+  "ok": true
+}
+```
 
 ## Agent Integration
 

@@ -139,5 +139,5 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add an explicit Vercel serverless entrypoint for the backend
 - [x] Add Vercel routing config for the backend project
 - [x] Verify the backend responds to `/health` on Vercel
-- [ ] Update backend deployment docs for Vercel
+- [x] Update backend deployment docs for Vercel
 - [ ] Make the Vitest suite pass
