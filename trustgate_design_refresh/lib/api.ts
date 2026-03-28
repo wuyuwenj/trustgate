@@ -11,12 +11,13 @@ export interface GetApiDetailOptions {
   baseUrl?: string;
 }
 
-function buildRequestUrl(path: string, baseUrl?: string) {
-  if (!baseUrl) {
-    return path;
-  }
+const defaultBackendBaseUrl =
+  process.env.TRUSTGATE_BACKEND_BASE_URL ??
+  process.env.NEXT_PUBLIC_TRUSTGATE_BACKEND_BASE_URL ??
+  "http://127.0.0.1:3000";
 
-  return new URL(path, baseUrl).toString();
+function buildRequestUrl(path: string, baseUrl?: string) {
+  return new URL(path, baseUrl ?? defaultBackendBaseUrl).toString();
 }
 
 export async function getRankings({

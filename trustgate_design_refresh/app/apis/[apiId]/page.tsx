@@ -3,8 +3,6 @@ import { getApiDetail } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-const defaultBackendBaseUrl = "http://127.0.0.1:3000";
-
 interface ApiDetailPageProps {
   params: Promise<{
     apiId: string;
@@ -30,8 +28,7 @@ export default async function ApiDetailPage({ params }: ApiDetailPageProps) {
   const { apiId } = await params;
   const decodedApiId = decodeURIComponent(apiId);
   const detail = await getApiDetail({
-    apiId: decodedApiId,
-    baseUrl: defaultBackendBaseUrl
+    apiId: decodedApiId
   });
   const { api: profile } = detail;
   const aggregateStats = [

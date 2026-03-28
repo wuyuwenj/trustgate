@@ -5,7 +5,6 @@ import type { ApiCategory } from "@/types";
 export const dynamic = "force-dynamic";
 
 const categories: ApiCategory[] = ["llm", "weather", "data"];
-const defaultBackendBaseUrl = "http://127.0.0.1:3000";
 const categoryTitles: Record<ApiCategory, string> = {
   llm: "LLM APIs",
   weather: "Weather APIs",
@@ -24,8 +23,7 @@ async function loadHomepageData() {
   const rankingResponses = await Promise.allSettled(
     categories.map((category) =>
       getRankings({
-        category,
-        baseUrl: defaultBackendBaseUrl
+        category
       })
     )
   );
