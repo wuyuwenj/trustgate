@@ -1,31 +1,61 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
-import type { ReportStore } from "../src/report-store.js";
-import type { ParsedReport } from "../src/reports.js";
+import type {
+  ApiDetail,
+  RankingEntry,
+  ReportStore,
+  StoredReport
+} from "../src/report-store.js";
+import { parseReportInput } from "../src/reports.js";
+
+function makeReport(
+  overrides: Partial<StoredReport> = {}
+): StoredReport {
+  const report = parseReportInput({
+    provider: "Open-Meteo",
+    endpoint: "/v1/forecast",
+    category: "weather",
+    taskType: "daily-forecast",
+    success: true,
+    latencyMs: 412,
+    timestamp: "2026-03-28T17:00:00Z",
+    starScore: 5,
+    ...overrides
+  });
+
+  return {
+    ...report,
+    ...overrides
+  };
+}
 
 describe("Trustgate API", () => {
   let app: ReturnType<typeof buildApp>;
-  const createReport = vi.fn<(report: ParsedReport) => Promise<ParsedReport>>();
-  const listReports = vi.fn<
-    (filters: { category: "llm" | "weather" | "data"; taskType?: string }) => Promise<ParsedReport[]>
-  >();
+  const createReport = vi.fn<ReportStore["createReport"]>();
+  const listReports = vi.fn<ReportStore["listReports"]>();
   const listRankings = vi.fn<ReportStore["listRankings"]>();
-  const listReportsByApiId = vi.fn<(apiId: string) => Promise<ParsedReport[]>>();
+  const getApiDetail = vi.fn<ReportStore["getApiDetail"]>();
+  const listReportsByApiId = vi.fn<ReportStore["listReportsByApiId"]>();
 
   beforeEach(() => {
     createReport.mockReset();
     listReports.mockReset();
     listRankings.mockReset();
+    getApiDetail.mockReset();
     listReportsByApiId.mockReset();
+
     createReport.mockImplementation(async (report) => report);
     listReports.mockResolvedValue([]);
     listRankings.mockResolvedValue([]);
+    getApiDetail.mockResolvedValue(null as ApiDetail | null);
     listReportsByApiId.mockResolvedValue([]);
+
     app = buildApp({
       reportStore: {
         createReport,
         listReports,
         listRankings,
+        getApiDetail,
         listReportsByApiId
       }
     });
@@ -100,42 +130,32 @@ describe("Trustgate API", () => {
     );
   });
 
-  it("returns rankings grouped by API", async () => {
-    listReports.mockResolvedValue([
+  it("returns rankings using the store-provided aggregate fields", async () => {
+    const weatherRankings: RankingEntry[] = [
       {
         apiId: "open-meteo-v1-forecast",
         provider: "Open-Meteo",
         endpoint: "/v1/forecast",
         category: "weather",
-        taskType: "daily-forecast",
-        success: true,
-        latencyMs: 320,
-        timestamp: "2026-03-28T17:00:00Z",
-        starScore: 5
-      },
-      {
-        apiId: "open-meteo-v1-forecast",
-        provider: "Open-Meteo",
-        endpoint: "/v1/forecast",
-        category: "weather",
-        taskType: "daily-forecast",
-        success: false,
-        latencyMs: 680,
-        timestamp: "2026-03-28T18:00:00Z",
-        starScore: 4
+        avgStarScore: 4.5,
+        reviewCount: 2,
+        successRate: 0.5,
+        medianLatencyMs: 500,
+        rateLimitedCount: 1
       },
       {
         apiId: "weatherapi-com-v1-current-json",
         provider: "WeatherAPI.com",
         endpoint: "/v1/current.json",
         category: "weather",
-        taskType: "daily-forecast",
-        success: true,
-        latencyMs: 290,
-        timestamp: "2026-03-28T16:00:00Z",
-        starScore: 3
+        avgStarScore: 3,
+        reviewCount: 1,
+        successRate: 1,
+        medianLatencyMs: 290,
+        rateLimitedCount: 0
       }
-    ]);
+    ];
+    listRankings.mockResolvedValue(weatherRankings);
 
     const response = await app.inject({
       method: "GET",
@@ -143,33 +163,10 @@ describe("Trustgate API", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(listReports).toHaveBeenCalledWith({ category: "weather" });
+    expect(listRankings).toHaveBeenCalledWith({ category: "weather" });
     expect(response.json()).toEqual({
       category: "weather",
-      items: [
-        {
-          apiId: "open-meteo-v1-forecast",
-          provider: "Open-Meteo",
-          endpoint: "/v1/forecast",
-          category: "weather",
-          averageStarScore: 4.5,
-          reportCount: 2,
-          successRate: 0.5,
-          averageLatencyMs: 500,
-          latestTimestamp: "2026-03-28T18:00:00Z"
-        },
-        {
-          apiId: "weatherapi-com-v1-current-json",
-          provider: "WeatherAPI.com",
-          endpoint: "/v1/current.json",
-          category: "weather",
-          averageStarScore: 3,
-          reportCount: 1,
-          successRate: 1,
-          averageLatencyMs: 290,
-          latestTimestamp: "2026-03-28T16:00:00Z"
-        }
-      ]
+      items: weatherRankings
     });
   });
 
@@ -180,7 +177,7 @@ describe("Trustgate API", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(listReports).toHaveBeenCalledWith({
+    expect(listRankings).toHaveBeenCalledWith({
       category: "weather",
       taskType: "daily-forecast"
     });
@@ -193,7 +190,7 @@ describe("Trustgate API", () => {
     });
 
     expect(response.statusCode).toBe(400);
-    expect(listReports).not.toHaveBeenCalled();
+    expect(listRankings).not.toHaveBeenCalled();
     expect(response.json()).toEqual(
       expect.objectContaining({
         error: "Invalid rankings query",
@@ -202,32 +199,24 @@ describe("Trustgate API", () => {
     );
   });
 
-  it("returns API details with aggregated stats and recent reviews", async () => {
+  it("returns API details with aggregate profile fields and recent reviews", async () => {
     listReportsByApiId.mockResolvedValue([
-      {
-        apiId: "open-meteo-v1-forecast",
-        provider: "Open-Meteo",
-        endpoint: "/v1/forecast",
-        category: "weather",
-        taskType: "daily-forecast",
-        success: true,
-        latencyMs: 320,
+      makeReport({
         timestamp: "2026-03-28T17:00:00Z",
         starScore: 5,
-        comment: "Fast and consistent forecast data."
-      },
-      {
-        apiId: "open-meteo-v1-forecast",
-        provider: "Open-Meteo",
-        endpoint: "/v1/forecast",
-        category: "weather",
-        taskType: "hourly-forecast",
-        success: false,
-        latencyMs: 680,
+        latencyMs: 320,
+        comment: "Fast and consistent forecast data.",
+        agentName: "codex",
+        sourceType: "agent"
+      }),
+      makeReport({
         timestamp: "2026-03-28T18:00:00Z",
         starScore: 3,
-        rateLimited: true
-      }
+        latencyMs: 680,
+        success: false,
+        rateLimited: true,
+        taskType: "hourly-forecast"
+      })
     ]);
 
     const response = await app.inject({
@@ -242,40 +231,25 @@ describe("Trustgate API", () => {
         apiId: "open-meteo-v1-forecast",
         provider: "Open-Meteo",
         endpoint: "/v1/forecast",
-        category: "weather"
-      },
-      stats: {
-        averageStarScore: 4,
-        reportCount: 2,
+        category: "weather",
+        avgStarScore: 4,
+        reviewCount: 2,
         successRate: 0.5,
-        averageLatencyMs: 500,
-        latestTimestamp: "2026-03-28T18:00:00Z"
+        medianLatencyMs: 500,
+        rateLimitedCount: 1
       },
-      recentReviews: [
-        {
-          apiId: "open-meteo-v1-forecast",
-          provider: "Open-Meteo",
-          endpoint: "/v1/forecast",
-          category: "weather",
-          taskType: "hourly-forecast",
-          success: false,
-          latencyMs: 680,
+      reviews: [
+        expect.objectContaining({
           timestamp: "2026-03-28T18:00:00Z",
-          starScore: 3,
+          taskType: "hourly-forecast",
           rateLimited: true
-        },
-        {
-          apiId: "open-meteo-v1-forecast",
-          provider: "Open-Meteo",
-          endpoint: "/v1/forecast",
-          category: "weather",
-          taskType: "daily-forecast",
-          success: true,
-          latencyMs: 320,
+        }),
+        expect.objectContaining({
           timestamp: "2026-03-28T17:00:00Z",
-          starScore: 5,
-          comment: "Fast and consistent forecast data."
-        }
+          comment: "Fast and consistent forecast data.",
+          sourceType: "agent",
+          agentName: "codex"
+        })
       ]
     });
   });

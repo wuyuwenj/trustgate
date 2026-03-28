@@ -19,10 +19,26 @@ export interface RankingEntry {
   rateLimitedCount: number;
 }
 
+export interface ApiDetail {
+  api: {
+    apiId: string;
+    provider: string;
+    endpoint: string;
+    category: ReportCategory;
+    avgStarScore: number;
+    reviewCount: number;
+    successRate: number;
+    medianLatencyMs: number;
+    rateLimitedCount: number;
+  };
+  reviews: StoredReport[];
+}
+
 export interface ReportStore {
   createReport(report: ParsedReport): Promise<StoredReport>;
   listReports(filters: ReportListFilters): Promise<StoredReport[]>;
   listRankings(filters: ReportListFilters): Promise<RankingEntry[]>;
+  getApiDetail(apiId: string): Promise<ApiDetail | null>;
   listReportsByApiId(apiId: string): Promise<StoredReport[]>;
 }
 
@@ -44,6 +60,10 @@ class InMemoryReportStore implements ReportStore {
 
   async listRankings(_filters: ReportListFilters): Promise<RankingEntry[]> {
     throw new Error("listRankings is not implemented");
+  }
+
+  async getApiDetail(_apiId: string): Promise<ApiDetail | null> {
+    throw new Error("getApiDetail is not implemented");
   }
 
   async listReportsByApiId(apiId: string) {
@@ -96,6 +116,9 @@ export function createReportStore(): ReportStore {
     },
     async listRankings(_filters): Promise<RankingEntry[]> {
       throw new Error("listRankings is not implemented");
+    },
+    async getApiDetail(_apiId): Promise<ApiDetail | null> {
+      throw new Error("getApiDetail is not implemented");
     },
     async listReportsByApiId(apiId) {
       const { data, error } = await supabase
