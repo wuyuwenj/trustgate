@@ -103,7 +103,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Return aggregate API profile fields from `GET /apis/:apiId`
 - [x] Return recent reviews from `GET /apis/:apiId`
 - [x] Return optional provenance fields in API detail review responses when present
-- [ ] Add a test for API detail aggregation
+- [x] Add a test for API detail aggregation
 - [ ] Add a test for recent review ordering in API detail responses
 - [ ] Add Supabase-backed `listRankings`
 - [ ] Add Supabase-backed `getApiDetail`

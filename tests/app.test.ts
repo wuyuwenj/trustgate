@@ -412,6 +412,81 @@ describe("Trustgate API", () => {
     }
   });
 
+  it("returns API detail aggregation for submitted reports", async () => {
+    const detailedApp = buildApp();
+
+    try {
+      await detailedApp.inject({
+        method: "POST",
+        url: "/reports",
+        payload: {
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: true,
+          latencyMs: 280,
+          timestamp: "2026-03-28T16:00:00Z",
+          starScore: 5
+        }
+      });
+      await detailedApp.inject({
+        method: "POST",
+        url: "/reports",
+        payload: {
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: true,
+          latencyMs: 450,
+          timestamp: "2026-03-28T17:00:00Z",
+          starScore: 4,
+          rateLimited: true
+        }
+      });
+      await detailedApp.inject({
+        method: "POST",
+        url: "/reports",
+        payload: {
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: false,
+          latencyMs: 900,
+          timestamp: "2026-03-28T18:00:00Z",
+          starScore: 3
+        }
+      });
+
+      const response = await detailedApp.inject({
+        method: "GET",
+        url: "/apis/open-meteo-v1-forecast"
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(
+        expect.objectContaining({
+          api: {
+            apiId: "open-meteo-v1-forecast",
+            provider: "Open-Meteo",
+            endpoint: "/v1/forecast",
+            category: "weather",
+            avgStarScore: 4,
+            reviewCount: 3,
+            successRate: 2 / 3,
+            medianLatencyMs: 450,
+            rateLimitedCount: 1
+          },
+          reviews: expect.any(Array)
+        })
+      );
+    } finally {
+      await detailedApp.close();
+    }
+  });
+
   it("returns reviewCount in ranking items", async () => {
     const rankedApp = buildApp();
 
