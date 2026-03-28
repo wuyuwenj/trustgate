@@ -16,6 +16,12 @@ export type ClassifiedReviewOutcome = {
   rateLimited: boolean;
 };
 
+export type ReviewScoreInput = {
+  success: boolean;
+  latencyMs: number;
+  rateLimited: boolean;
+};
+
 const FLAG_NAMES = new Set([
   "--provider",
   "--endpoint",
@@ -148,6 +154,26 @@ export function classifyApiResult(input: {
     success: false,
     rateLimited: false
   };
+}
+
+export function scoreReview(input: ReviewScoreInput) {
+  if (!input.success || input.rateLimited) {
+    return 1;
+  }
+
+  if (input.latencyMs <= 500) {
+    return 5;
+  }
+
+  if (input.latencyMs <= 1_500) {
+    return 4;
+  }
+
+  if (input.latencyMs <= 3_000) {
+    return 3;
+  }
+
+  return 2;
 }
 
 function isMainModule() {

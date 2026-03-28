@@ -110,7 +110,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add CLI argument parsing to `scripts/review-api.ts`
 - [x] Add latency measurement to `scripts/review-api.ts`
 - [x] Add success and failure classification to `scripts/review-api.ts`
-- [ ] Add star score calculation to `scripts/review-api.ts`
+- [x] Add star score calculation to `scripts/review-api.ts`
 - [ ] Add comment generation to `scripts/review-api.ts`
 - [ ] Add POST submission to Trustgate in `scripts/review-api.ts`
 - [ ] Add one concrete Open-Meteo review flow to `scripts/review-api.ts`
