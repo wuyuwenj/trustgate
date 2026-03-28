@@ -136,7 +136,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add frontend environment configuration for the backend base URL
 - [x] Update the frontend README with local run instructions and backend URL setup
 - [x] Verify the frontend builds after the migration
-- [ ] Add an explicit Vercel serverless entrypoint for the backend
+- [x] Add an explicit Vercel serverless entrypoint for the backend
 - [ ] Add Vercel routing config for the backend project
 - [ ] Verify the backend responds to `/health` on Vercel
 - [ ] Update backend deployment docs for Vercel
