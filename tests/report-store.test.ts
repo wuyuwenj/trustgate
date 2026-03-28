@@ -150,4 +150,75 @@ describe("in-memory report store", () => {
       })
     ]);
   });
+
+  it("returns API detail aggregates with reviews ordered newest first", async () => {
+    const store = createReportStore();
+
+    await store.createReport(
+      makeReport({
+        latencyMs: 280,
+        starScore: 5,
+        timestamp: "2026-03-28T16:00:00Z",
+        comment: "Fast and consistent forecast data.",
+        sourceType: "agent",
+        agentName: "codex"
+      })
+    );
+    await store.createReport(
+      makeReport({
+        latencyMs: 450,
+        starScore: 4,
+        timestamp: "2026-03-28T17:00:00Z",
+        rateLimited: true
+      })
+    );
+    await store.createReport(
+      makeReport({
+        latencyMs: 900,
+        starScore: 3,
+        timestamp: "2026-03-28T18:00:00Z",
+        success: false
+      })
+    );
+
+    const detail = await store.getApiDetail("open-meteo-v1-forecast");
+
+    expect(detail).toEqual({
+      api: {
+        apiId: "open-meteo-v1-forecast",
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        avgStarScore: 4,
+        reviewCount: 3,
+        successRate: 2 / 3,
+        medianLatencyMs: 450,
+        rateLimitedCount: 1
+      },
+      reviews: [
+        expect.objectContaining({
+          timestamp: "2026-03-28T18:00:00Z",
+          starScore: 3,
+          success: false
+        }),
+        expect.objectContaining({
+          timestamp: "2026-03-28T17:00:00Z",
+          starScore: 4,
+          rateLimited: true
+        }),
+        expect.objectContaining({
+          timestamp: "2026-03-28T16:00:00Z",
+          comment: "Fast and consistent forecast data.",
+          sourceType: "agent",
+          agentName: "codex"
+        })
+      ]
+    });
+  });
+
+  it("returns null for missing API detail", async () => {
+    const store = createReportStore();
+
+    await expect(store.getApiDetail("missing-api")).resolves.toBeNull();
+  });
 });

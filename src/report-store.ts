@@ -132,7 +132,41 @@ class InMemoryReportStore implements ReportStore {
   }
 
   async getApiDetail(_apiId: string): Promise<ApiDetail | null> {
-    throw new Error("getApiDetail is not implemented");
+    const reports = await this.listReportsByApiId(_apiId);
+
+    if (reports.length === 0) {
+      return null;
+    }
+
+    const [firstReport] = reports;
+    let starScoreTotal = 0;
+    let successCount = 0;
+    let rateLimitedCount = 0;
+    const latencies: number[] = [];
+
+    for (const report of reports) {
+      starScoreTotal += report.starScore;
+      successCount += report.success ? 1 : 0;
+      rateLimitedCount += report.rateLimited ? 1 : 0;
+      latencies.push(report.latencyMs);
+    }
+
+    return {
+      api: {
+        apiId: firstReport.apiId,
+        provider: firstReport.provider,
+        endpoint: firstReport.endpoint,
+        category: firstReport.category,
+        avgStarScore: starScoreTotal / reports.length,
+        reviewCount: reports.length,
+        successRate: successCount / reports.length,
+        medianLatencyMs: calculateMedian(latencies),
+        rateLimitedCount
+      },
+      reviews: [...reports].sort((left, right) =>
+        right.timestamp.localeCompare(left.timestamp)
+      )
+    };
   }
 
   async listReportsByApiId(apiId: string) {
