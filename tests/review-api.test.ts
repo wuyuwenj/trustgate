@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("review-api script contract", () => {
   it("exports a CLI argument parser", async () => {
@@ -233,5 +237,107 @@ describe("review-api script contract", () => {
       sourceType: "agent",
       agentName: "codex"
     });
+  });
+
+  it("submits review payloads to Trustgate", async () => {
+    const module = (await import("../scripts/review-api.js")) as Record<
+      string,
+      unknown
+    >;
+    const submitReview = module.submitReview as
+      | ((input: {
+          trustgateBaseUrl: string;
+          payload: Record<string, unknown>;
+        }) => Promise<unknown>)
+      | undefined;
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ report: { apiId: "open-meteo-v1-forecast" } }), {
+        status: 201,
+        headers: {
+          "content-type": "application/json"
+        }
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      submitReview?.({
+        trustgateBaseUrl: "http://localhost:3000/",
+        payload: {
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: true,
+          latencyMs: 320,
+          timestamp: "2026-03-28T17:00:00Z",
+          starScore: 5
+        }
+      })
+    ).resolves.toEqual({
+      report: {
+        apiId: "open-meteo-v1-forecast"
+      }
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:3000/reports", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        taskType: "daily-forecast",
+        success: true,
+        latencyMs: 320,
+        timestamp: "2026-03-28T17:00:00Z",
+        starScore: 5
+      })
+    });
+  });
+
+  it("surfaces Trustgate submission failures", async () => {
+    const module = (await import("../scripts/review-api.js")) as Record<
+      string,
+      unknown
+    >;
+    const submitReview = module.submitReview as
+      | ((input: {
+          trustgateBaseUrl: string;
+          payload: Record<string, unknown>;
+        }) => Promise<unknown>)
+      | undefined;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ error: "Invalid report payload" }), {
+          status: 400,
+          statusText: "Bad Request",
+          headers: {
+            "content-type": "application/json"
+          }
+        })
+      )
+    );
+
+    await expect(
+      submitReview?.({
+        trustgateBaseUrl: "http://localhost:3000",
+        payload: {
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: true,
+          latencyMs: 320,
+          timestamp: "2026-03-28T17:00:00Z",
+          starScore: 5
+        }
+      })
+    ).rejects.toThrow(
+      'Trustgate submission failed (400 Bad Request): {"error":"Invalid report payload"}'
+    );
   });
 });

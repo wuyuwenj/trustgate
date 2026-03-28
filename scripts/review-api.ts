@@ -30,6 +30,12 @@ export type ReviewCommentInput = ReviewScoreInput & {
   starScore: number;
 };
 
+export type SubmitReviewInput = {
+  trustgateBaseUrl: string;
+  payload: ReportInput;
+  fetchImpl?: typeof fetch;
+};
+
 const MAX_COMMENT_LENGTH = 500;
 
 const FLAG_NAMES = new Set([
@@ -210,6 +216,30 @@ export function buildReviewPayload(input: ReportInput): ReportInput {
   return {
     ...input
   };
+}
+
+export async function submitReview(input: SubmitReviewInput) {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${normalizeBaseUrl(input.trustgateBaseUrl)}/reports`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(input.payload)
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    const errorDetail = errorBody.trim();
+
+    throw new Error(
+      `Trustgate submission failed (${response.status} ${response.statusText})${
+        errorDetail ? `: ${errorDetail}` : ""
+      }`
+    );
+  }
+
+  return response.json();
 }
 
 function isMainModule() {
