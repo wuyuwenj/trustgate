@@ -1,11 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
+import type { ParsedReport } from "../src/reports.js";
 
 describe("Trustgate API", () => {
   let app: ReturnType<typeof buildApp>;
+  const createReport = vi.fn<(report: ParsedReport) => Promise<ParsedReport>>();
 
   beforeEach(() => {
-    app = buildApp();
+    createReport.mockReset();
+    createReport.mockImplementation(async (report) => report);
+    app = buildApp({
+      reportStore: {
+        createReport
+      }
+    });
   });
 
   afterEach(async () => {
@@ -33,6 +41,48 @@ describe("Trustgate API", () => {
     });
 
     expect(response.statusCode).toBe(201);
+    expect(createReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiId: "open-meteo-v1-forecast",
+        category: "weather",
+        starScore: 5
+      })
+    );
+    expect(response.json()).toEqual(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          apiId: "open-meteo-v1-forecast",
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast"
+        })
+      })
+    );
+  });
+
+  it("rejects an invalid review report", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/reports",
+      payload: {
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        taskType: "daily-forecast",
+        success: true,
+        latencyMs: 412,
+        timestamp: "2026-03-28T17:00:00Z",
+        starScore: 7
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(createReport).not.toHaveBeenCalled();
+    expect(response.json()).toEqual(
+      expect.objectContaining({
+        error: "Invalid report payload",
+        issues: expect.any(Array)
+      })
+    );
   });
 
   it("returns rankings grouped by API", async () => {
