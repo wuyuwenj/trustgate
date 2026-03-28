@@ -36,7 +36,20 @@ export type SubmitReviewInput = {
   fetchImpl?: typeof fetch;
 };
 
+export type RunOpenMeteoReviewInput = {
+  args: ReviewCliArgs;
+  fetchImpl?: typeof fetch;
+  now?: () => Date;
+};
+
 const MAX_COMMENT_LENGTH = 500;
+const OPEN_METEO_PROVIDER = "Open-Meteo";
+const OPEN_METEO_ENDPOINT = "/v1/forecast";
+const OPEN_METEO_CATEGORY = "weather";
+const OPEN_METEO_TASK_TYPE = "daily-forecast";
+const OPEN_METEO_LATITUDE = "37.7749";
+const OPEN_METEO_LONGITUDE = "-122.4194";
+const OPEN_METEO_DAILY_FIELDS = ["temperature_2m_max", "temperature_2m_min"];
 
 const FLAG_NAMES = new Set([
   "--provider",
@@ -218,6 +231,65 @@ export function buildReviewPayload(input: ReportInput): ReportInput {
   };
 }
 
+function isOpenMeteoDailyForecastResponse(
+  body: unknown
+): body is {
+  daily: {
+    time: unknown[];
+    temperature_2m_max: unknown[];
+    temperature_2m_min: unknown[];
+  };
+} {
+  if (typeof body !== "object" || body === null || !("daily" in body)) {
+    return false;
+  }
+
+  const { daily } = body;
+
+  if (typeof daily !== "object" || daily === null) {
+    return false;
+  }
+
+  if (
+    !("time" in daily) ||
+    !("temperature_2m_max" in daily) ||
+    !("temperature_2m_min" in daily)
+  ) {
+    return false;
+  }
+
+  return (
+    Array.isArray(daily.time) &&
+    daily.time.length > 0 &&
+    Array.isArray(daily.temperature_2m_max) &&
+    daily.temperature_2m_max.length > 0 &&
+    Array.isArray(daily.temperature_2m_min) &&
+    daily.temperature_2m_min.length > 0
+  );
+}
+
+function assertSupportedOpenMeteoReview(args: ReviewCliArgs) {
+  if (
+    args.provider !== OPEN_METEO_PROVIDER ||
+    args.endpoint !== OPEN_METEO_ENDPOINT ||
+    args.category !== OPEN_METEO_CATEGORY ||
+    args.taskType !== OPEN_METEO_TASK_TYPE
+  ) {
+    throw new Error(
+      "Only the Open-Meteo /v1/forecast weather daily-forecast review flow is implemented."
+    );
+  }
+}
+
+function buildOpenMeteoForecastUrl() {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", OPEN_METEO_LATITUDE);
+  url.searchParams.set("longitude", OPEN_METEO_LONGITUDE);
+  url.searchParams.set("daily", OPEN_METEO_DAILY_FIELDS.join(","));
+  url.searchParams.set("timezone", "UTC");
+  return url.toString();
+}
+
 export async function submitReview(input: SubmitReviewInput) {
   const fetchImpl = input.fetchImpl ?? fetch;
   const response = await fetchImpl(`${normalizeBaseUrl(input.trustgateBaseUrl)}/reports`, {
@@ -242,15 +314,97 @@ export async function submitReview(input: SubmitReviewInput) {
   return response.json();
 }
 
+export async function runOpenMeteoReview(input: RunOpenMeteoReviewInput) {
+  assertSupportedOpenMeteoReview(input.args);
+
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const now = input.now ?? (() => new Date());
+  const reviewUrl = buildOpenMeteoForecastUrl();
+  const measuredCall = await measureLatency(async () => {
+    try {
+      const response = await fetchImpl(reviewUrl, {
+        headers: {
+          accept: "application/json"
+        }
+      });
+      const body = await response.json().catch(() => null);
+
+      return {
+        statusCode: response.status,
+        body,
+        error: undefined
+      };
+    } catch (error) {
+      return {
+        statusCode: null,
+        body: null,
+        error
+      };
+    }
+  });
+  const classified = classifyApiResult({
+    statusCode: measuredCall.result.statusCode,
+    error: measuredCall.result.error
+  });
+  const success =
+    classified.success && isOpenMeteoDailyForecastResponse(measuredCall.result.body);
+  const starScore = scoreReview({
+    success,
+    latencyMs: measuredCall.latencyMs,
+    rateLimited: classified.rateLimited
+  });
+  const payload = buildReviewPayload({
+    provider: input.args.provider,
+    endpoint: input.args.endpoint,
+    category: input.args.category,
+    taskType: input.args.taskType,
+    success,
+    latencyMs: measuredCall.latencyMs,
+    timestamp: now().toISOString(),
+    starScore,
+    rateLimited: classified.rateLimited,
+    comment: generateReviewComment({
+      success,
+      latencyMs: measuredCall.latencyMs,
+      rateLimited: classified.rateLimited,
+      starScore
+    }),
+    sourceType: input.args.sourceType,
+    agentName: input.args.agentName
+  });
+  const submission = await submitReview({
+    trustgateBaseUrl: input.args.trustgateBaseUrl,
+    payload,
+    fetchImpl
+  });
+
+  return {
+    reviewUrl,
+    payload,
+    submission
+  };
+}
+
 function isMainModule() {
   return process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url;
 }
 
 if (isMainModule()) {
+  void (async () => {
+    try {
+      const args = parseReviewArgs();
+      const review = await runOpenMeteoReview({ args });
+
+      console.log(JSON.stringify(review, null, 2));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      console.error(message);
+      process.exitCode = 1;
+    }
+  })();
+} else {
   try {
-    const args = parseReviewArgs();
-    console.log(JSON.stringify(args, null, 2));
-    console.log("TODO: implement real API review runner");
+    // Preserve the current module side effects for tests that import synchronously.
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(message);
