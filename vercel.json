@@ -1,20 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/health",
-      "destination": "/api"
-    },
-    {
-      "source": "/reports",
-      "destination": "/api"
-    },
-    {
-      "source": "/rankings",
-      "destination": "/api"
-    },
-    {
-      "source": "/apis/:apiId",
-      "destination": "/api"
-    }
-  ]
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": null
 }

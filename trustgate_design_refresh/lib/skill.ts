@@ -1,10 +1,7 @@
 const defaultBackendBaseUrl = "http://127.0.0.1:3000";
 
 export function getBackendBaseUrl() {
-  const value =
-    process.env.TRUSTGATE_BACKEND_BASE_URL ??
-    process.env.NEXT_PUBLIC_TRUSTGATE_BACKEND_BASE_URL ??
-    defaultBackendBaseUrl;
+  const value = process.env.TRUSTGATE_BACKEND_BASE_URL ?? defaultBackendBaseUrl;
 
   return value.replace(/\/+$/, "");
 }

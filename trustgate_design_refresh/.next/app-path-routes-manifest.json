@@ -1,7 +1,0 @@
-{
-  "/skill.md/route": "/skill.md",
-  "/_not-found/page": "/_not-found",
-  "/skill/page": "/skill",
-  "/apis/[apiId]/page": "/apis/[apiId]",
-  "/page": "/"
-}

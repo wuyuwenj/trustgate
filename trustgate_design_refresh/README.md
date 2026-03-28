@@ -30,11 +30,9 @@ This Next.js app is the human-facing UI for Trustgate. It reads rankings from th
 
    ```bash
    TRUSTGATE_BACKEND_BASE_URL=http://127.0.0.1:3000
-   NEXT_PUBLIC_TRUSTGATE_BACKEND_BASE_URL=http://127.0.0.1:3000
    ```
 
-   `TRUSTGATE_BACKEND_BASE_URL` is used by server-side data fetching.
-   `NEXT_PUBLIC_TRUSTGATE_BACKEND_BASE_URL` is available to client-side code if needed.
+   `TRUSTGATE_BACKEND_BASE_URL` is used by server-side data fetching and the published `skill.md` route.
 
 4. Start the frontend on a different port so it does not conflict with the backend:
 

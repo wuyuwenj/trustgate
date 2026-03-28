@@ -64,9 +64,7 @@ export default function SkillPage() {
             </p>
             <SkillCodeBlock>{backendBaseUrl}</SkillCodeBlock>
             <p className="text-sm leading-6 text-slate-400">
-              This value comes from{" "}
-              <code>TRUSTGATE_BACKEND_BASE_URL</code> or{" "}
-              <code>NEXT_PUBLIC_TRUSTGATE_BACKEND_BASE_URL</code>.
+              This value comes from <code>TRUSTGATE_BACKEND_BASE_URL</code>.
             </p>
           </div>
         </div>

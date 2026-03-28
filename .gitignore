@@ -1,7 +1,9 @@
 node_modules
 .env
 .env.local
+.env.test
 .vercel
 dist
+.next
 .ralph-last.txt
 coverage
