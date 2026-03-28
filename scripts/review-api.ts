@@ -11,6 +11,11 @@ export type ReviewCliArgs = {
   agentName?: string;
 };
 
+export type ClassifiedReviewOutcome = {
+  success: boolean;
+  rateLimited: boolean;
+};
+
 const FLAG_NAMES = new Set([
   "--provider",
   "--endpoint",
@@ -110,6 +115,38 @@ export async function measureLatency<T>(
   return {
     result,
     latencyMs
+  };
+}
+
+function isRateLimitError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /\b429\b|rate limit|too many requests/i.test(error.message);
+}
+
+export function classifyApiResult(input: {
+  statusCode?: number | null;
+  error?: unknown;
+}): ClassifiedReviewOutcome {
+  if (input.statusCode === 429 || isRateLimitError(input.error)) {
+    return {
+      success: false,
+      rateLimited: true
+    };
+  }
+
+  if (typeof input.statusCode === "number") {
+    return {
+      success: input.statusCode >= 200 && input.statusCode < 300,
+      rateLimited: false
+    };
+  }
+
+  return {
+    success: false,
+    rateLimited: false
   };
 }
 

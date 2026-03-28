@@ -94,6 +94,33 @@ describe("review-api script contract", () => {
     expect(measured.latencyMs).toBeGreaterThanOrEqual(10);
   });
 
+  it("exports a helper that classifies success, failure, and rate limiting", async () => {
+    const module = (await import("../scripts/review-api.js")) as Record<
+      string,
+      unknown
+    >;
+    const classifyApiResult = module.classifyApiResult as
+      | ((input: { statusCode?: number | null; error?: unknown }) => {
+          success: boolean;
+          rateLimited: boolean;
+        })
+      | undefined;
+
+    expect(typeof classifyApiResult).toBe("function");
+    expect(classifyApiResult?.({ statusCode: 200 })).toEqual({
+      success: true,
+      rateLimited: false
+    });
+    expect(classifyApiResult?.({ statusCode: 503 })).toEqual({
+      success: false,
+      rateLimited: false
+    });
+    expect(classifyApiResult?.({ statusCode: 429 })).toEqual({
+      success: false,
+      rateLimited: true
+    });
+  });
+
   it("exports a review scoring helper that returns integer star scores", async () => {
     const module = (await import("../scripts/review-api.js")) as Record<
       string,
