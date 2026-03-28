@@ -57,6 +57,81 @@ function calculateMedian(values: number[]) {
   return (sortedValues[midpoint - 1]! + sortedValues[midpoint]!) / 2;
 }
 
+function createSeededRankings(category: ReportCategory): RankingEntry[] {
+  return listSeededApiRecordsByCategory(category).map((record) => ({
+    apiId: record.apiId,
+    provider: record.provider,
+    endpoint: record.endpoint,
+    category: record.category,
+    avgStarScore: 0,
+    reviewCount: 0,
+    successRate: 0,
+    medianLatencyMs: 0,
+    rateLimitedCount: 0
+  }));
+}
+
+function buildRankings(reports: StoredReport[]): RankingEntry[] {
+  const rankings = new Map<
+    string,
+    {
+      apiId: string;
+      provider: string;
+      endpoint: string;
+      category: ReportCategory;
+      starScoreTotal: number;
+      reviewCount: number;
+      successCount: number;
+      latencies: number[];
+      rateLimitedCount: number;
+    }
+  >();
+
+  for (const report of reports) {
+    const existing = rankings.get(report.apiId);
+
+    if (existing) {
+      existing.starScoreTotal += report.starScore;
+      existing.reviewCount += 1;
+      existing.successCount += report.success ? 1 : 0;
+      existing.latencies.push(report.latencyMs);
+      existing.rateLimitedCount += report.rateLimited ? 1 : 0;
+      continue;
+    }
+
+    rankings.set(report.apiId, {
+      apiId: report.apiId,
+      provider: report.provider,
+      endpoint: report.endpoint,
+      category: report.category,
+      starScoreTotal: report.starScore,
+      reviewCount: 1,
+      successCount: report.success ? 1 : 0,
+      latencies: [report.latencyMs],
+      rateLimitedCount: report.rateLimited ? 1 : 0
+    });
+  }
+
+  return Array.from(rankings.values())
+    .map((ranking) => ({
+      apiId: ranking.apiId,
+      provider: ranking.provider,
+      endpoint: ranking.endpoint,
+      category: ranking.category,
+      avgStarScore: ranking.starScoreTotal / ranking.reviewCount,
+      reviewCount: ranking.reviewCount,
+      successRate: ranking.successCount / ranking.reviewCount,
+      medianLatencyMs: calculateMedian(ranking.latencies),
+      rateLimitedCount: ranking.rateLimitedCount
+    }))
+    .sort(
+      (left, right) =>
+        right.avgStarScore - left.avgStarScore ||
+        right.reviewCount - left.reviewCount ||
+        left.apiId.localeCompare(right.apiId)
+    );
+}
+
 class InMemoryReportStore implements ReportStore {
   private readonly reports: StoredReport[] = [];
 
@@ -75,78 +150,12 @@ class InMemoryReportStore implements ReportStore {
 
   async listRankings(filters: ReportListFilters): Promise<RankingEntry[]> {
     if (this.reports.length === 0) {
-      return listSeededApiRecordsByCategory(filters.category).map((record) => ({
-        apiId: record.apiId,
-        provider: record.provider,
-        endpoint: record.endpoint,
-        category: record.category,
-        avgStarScore: 0,
-        reviewCount: 0,
-        successRate: 0,
-        medianLatencyMs: 0,
-        rateLimitedCount: 0
-      }));
+      return createSeededRankings(filters.category);
     }
 
     const reports = await this.listReports(filters);
-    const rankings = new Map<
-      string,
-      {
-        apiId: string;
-        provider: string;
-        endpoint: string;
-        category: ReportCategory;
-        starScoreTotal: number;
-        reviewCount: number;
-        successCount: number;
-        latencies: number[];
-        rateLimitedCount: number;
-      }
-    >();
 
-    for (const report of reports) {
-      const existing = rankings.get(report.apiId);
-
-      if (existing) {
-        existing.starScoreTotal += report.starScore;
-        existing.reviewCount += 1;
-        existing.successCount += report.success ? 1 : 0;
-        existing.latencies.push(report.latencyMs);
-        existing.rateLimitedCount += report.rateLimited ? 1 : 0;
-        continue;
-      }
-
-      rankings.set(report.apiId, {
-        apiId: report.apiId,
-        provider: report.provider,
-        endpoint: report.endpoint,
-        category: report.category,
-        starScoreTotal: report.starScore,
-        reviewCount: 1,
-        successCount: report.success ? 1 : 0,
-        latencies: [report.latencyMs],
-        rateLimitedCount: report.rateLimited ? 1 : 0
-      });
-    }
-
-    return Array.from(rankings.values())
-      .map((ranking) => ({
-        apiId: ranking.apiId,
-        provider: ranking.provider,
-        endpoint: ranking.endpoint,
-        category: ranking.category,
-        avgStarScore: ranking.starScoreTotal / ranking.reviewCount,
-        reviewCount: ranking.reviewCount,
-        successRate: ranking.successCount / ranking.reviewCount,
-        medianLatencyMs: calculateMedian(ranking.latencies),
-        rateLimitedCount: ranking.rateLimitedCount
-      }))
-      .sort(
-        (left, right) =>
-          right.avgStarScore - left.avgStarScore ||
-          right.reviewCount - left.reviewCount ||
-          left.apiId.localeCompare(right.apiId)
-      );
+    return buildRankings(reports);
   }
 
   async getApiDetail(apiId: string): Promise<ApiDetail | null> {
@@ -254,8 +263,23 @@ export function createReportStore(): ReportStore {
 
       return (data ?? []) as StoredReport[];
     },
-    async listRankings(_filters): Promise<RankingEntry[]> {
-      throw new Error("listRankings is not implemented");
+    async listRankings(filters): Promise<RankingEntry[]> {
+      let query = supabase
+        .from("reports")
+        .select("*")
+        .eq("category", filters.category);
+
+      if (filters.taskType !== undefined) {
+        query = query.eq("taskType", filters.taskType);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return buildRankings((data ?? []) as StoredReport[]);
     },
     async getApiDetail(_apiId): Promise<ApiDetail | null> {
       throw new Error("getApiDetail is not implemented");

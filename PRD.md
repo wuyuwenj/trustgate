@@ -105,7 +105,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Return optional provenance fields in API detail review responses when present
 - [x] Add a test for API detail aggregation
 - [x] Add a test for recent review ordering in API detail responses
-- [ ] Add Supabase-backed `listRankings`
+- [x] Add Supabase-backed `listRankings`
 - [ ] Add Supabase-backed `getApiDetail`
 - [ ] Add CLI argument parsing to `scripts/review-api.ts`
 - [ ] Add latency measurement to `scripts/review-api.ts`

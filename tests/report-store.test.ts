@@ -3,10 +3,59 @@ import {
   beforeEach,
   describe,
   expect,
-  it
+  it,
+  vi
 } from "vitest";
 import { createReportStore } from "../src/report-store.js";
 import { parseReportInput } from "../src/reports.js";
+
+const mockSupabaseReports: ReturnType<typeof parseReportInput>[] = [];
+
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: vi.fn(() => ({
+    from(table: string) {
+      if (table !== "reports") {
+        throw new Error(`Unexpected table: ${table}`);
+      }
+
+      return {
+        insert(report: ReturnType<typeof parseReportInput>) {
+          mockSupabaseReports.push(report);
+
+          return {
+            select() {
+              return {
+                async single() {
+                  return { data: report, error: null };
+                }
+              };
+            }
+          };
+        },
+        select() {
+          const filters = new Map<string, unknown>();
+
+          const query = {
+            data: mockSupabaseReports as ReturnType<typeof parseReportInput>[],
+            error: null as Error | null,
+            eq(column: string, value: unknown) {
+              filters.set(column, value);
+              this.data = mockSupabaseReports.filter((report) =>
+                Array.from(filters.entries()).every(
+                  ([filterColumn, filterValue]) =>
+                    report[filterColumn as keyof typeof report] === filterValue
+                )
+              );
+              return this;
+            }
+          };
+
+          return query;
+        }
+      };
+    }
+  }))
+}));
 
 function makeReport(
   overrides: Partial<ReturnType<typeof parseReportInput>> = {}
@@ -32,6 +81,7 @@ describe("in-memory report store", () => {
   };
 
   beforeEach(() => {
+    mockSupabaseReports.length = 0;
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_ANON_KEY;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -296,5 +346,72 @@ describe("in-memory report store", () => {
     const store = createReportStore();
 
     await expect(store.getApiDetail("missing-api")).resolves.toBeNull();
+  });
+});
+
+describe("supabase-backed report store", () => {
+  const originalEnv = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+  };
+
+  beforeEach(() => {
+    mockSupabaseReports.length = 0;
+    process.env.SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_ANON_KEY = "anon-key";
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  });
+
+  afterEach(() => {
+    process.env.SUPABASE_URL = originalEnv.SUPABASE_URL;
+    process.env.SUPABASE_ANON_KEY = originalEnv.SUPABASE_ANON_KEY;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = originalEnv.SUPABASE_SERVICE_ROLE_KEY;
+  });
+
+  it("aggregates rankings from Supabase report rows", async () => {
+    mockSupabaseReports.push(
+      makeReport({
+        latencyMs: 280,
+        starScore: 5,
+        timestamp: "2026-03-28T16:00:00Z",
+        taskType: "daily-forecast"
+      }),
+      makeReport({
+        latencyMs: 450,
+        starScore: 4,
+        timestamp: "2026-03-28T17:00:00Z",
+        taskType: "daily-forecast",
+        rateLimited: true
+      }),
+      makeReport({
+        provider: "OpenWeatherMap",
+        endpoint: "/data/2.5/weather",
+        latencyMs: 320,
+        starScore: 3,
+        timestamp: "2026-03-28T18:00:00Z",
+        taskType: "hourly-forecast"
+      })
+    );
+
+    const store = createReportStore();
+    const rankings = await store.listRankings({
+      category: "weather",
+      taskType: "daily-forecast"
+    });
+
+    expect(rankings).toEqual([
+      {
+        apiId: "open-meteo-v1-forecast",
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        avgStarScore: 4.5,
+        reviewCount: 2,
+        successRate: 1,
+        medianLatencyMs: 365,
+        rateLimitedCount: 1
+      }
+    ]);
   });
 });
