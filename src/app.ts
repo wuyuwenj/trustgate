@@ -7,6 +7,30 @@ interface BuildAppOptions {
   reportStore?: ReportStore;
 }
 
+function summarizeReports(reports: Awaited<ReturnType<ReportStore["listReportsByApiId"]>>) {
+  let starScoreTotal = 0;
+  let successCount = 0;
+  let latencyTotal = 0;
+  let latestTimestamp = reports[0]?.timestamp ?? "";
+
+  for (const report of reports) {
+    starScoreTotal += report.starScore;
+    successCount += report.success ? 1 : 0;
+    latencyTotal += report.latencyMs;
+    if (report.timestamp > latestTimestamp) {
+      latestTimestamp = report.timestamp;
+    }
+  }
+
+  return {
+    averageStarScore: starScoreTotal / reports.length,
+    reportCount: reports.length,
+    successRate: successCount / reports.length,
+    averageLatencyMs: latencyTotal / reports.length,
+    latestTimestamp
+  };
+}
+
 export function buildApp(options: BuildAppOptions = {}) {
   const app = Fastify();
   const reportStore = options.reportStore ?? createReportStore();
@@ -115,8 +139,34 @@ export function buildApp(options: BuildAppOptions = {}) {
     }
   });
 
-  app.get("/apis/:apiId", async () => {
-    throw new Error("GET /apis/:apiId is not implemented yet");
+  app.get("/apis/:apiId", async (request, reply) => {
+    try {
+      const { apiId } = request.params as { apiId: string };
+      const reports = await reportStore.listReportsByApiId(apiId);
+
+      if (reports.length === 0) {
+        return reply.code(404).send({ error: "API not found" });
+      }
+
+      const [firstReport] = reports;
+      const recentReviews = [...reports]
+        .sort((left, right) => right.timestamp.localeCompare(left.timestamp))
+        .slice(0, 10);
+
+      return {
+        api: {
+          apiId: firstReport.apiId,
+          provider: firstReport.provider,
+          endpoint: firstReport.endpoint,
+          category: firstReport.category
+        },
+        stats: summarizeReports(reports),
+        recentReviews
+      };
+    } catch (error) {
+      request.log.error({ error }, "Failed to load API details");
+      return reply.code(500).send({ error: "Failed to load API details" });
+    }
   });
 
   return app;

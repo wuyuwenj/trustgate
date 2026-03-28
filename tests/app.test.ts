@@ -8,16 +8,20 @@ describe("Trustgate API", () => {
   const listReports = vi.fn<
     (filters: { category: "llm" | "weather" | "data"; taskType?: string }) => Promise<ParsedReport[]>
   >();
+  const listReportsByApiId = vi.fn<(apiId: string) => Promise<ParsedReport[]>>();
 
   beforeEach(() => {
     createReport.mockReset();
     listReports.mockReset();
+    listReportsByApiId.mockReset();
     createReport.mockImplementation(async (report) => report);
     listReports.mockResolvedValue([]);
+    listReportsByApiId.mockResolvedValue([]);
     app = buildApp({
       reportStore: {
         createReport,
-        listReports
+        listReports,
+        listReportsByApiId
       }
     });
   });
@@ -191,5 +195,94 @@ describe("Trustgate API", () => {
         issues: expect.any(Array)
       })
     );
+  });
+
+  it("returns API details with aggregated stats and recent reviews", async () => {
+    listReportsByApiId.mockResolvedValue([
+      {
+        apiId: "open-meteo-v1-forecast",
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        taskType: "daily-forecast",
+        success: true,
+        latencyMs: 320,
+        timestamp: "2026-03-28T17:00:00Z",
+        starScore: 5,
+        comment: "Fast and consistent forecast data."
+      },
+      {
+        apiId: "open-meteo-v1-forecast",
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather",
+        taskType: "hourly-forecast",
+        success: false,
+        latencyMs: 680,
+        timestamp: "2026-03-28T18:00:00Z",
+        starScore: 3,
+        rateLimited: true
+      }
+    ]);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/apis/open-meteo-v1-forecast"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(listReportsByApiId).toHaveBeenCalledWith("open-meteo-v1-forecast");
+    expect(response.json()).toEqual({
+      api: {
+        apiId: "open-meteo-v1-forecast",
+        provider: "Open-Meteo",
+        endpoint: "/v1/forecast",
+        category: "weather"
+      },
+      stats: {
+        averageStarScore: 4,
+        reportCount: 2,
+        successRate: 0.5,
+        averageLatencyMs: 500,
+        latestTimestamp: "2026-03-28T18:00:00Z"
+      },
+      recentReviews: [
+        {
+          apiId: "open-meteo-v1-forecast",
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "hourly-forecast",
+          success: false,
+          latencyMs: 680,
+          timestamp: "2026-03-28T18:00:00Z",
+          starScore: 3,
+          rateLimited: true
+        },
+        {
+          apiId: "open-meteo-v1-forecast",
+          provider: "Open-Meteo",
+          endpoint: "/v1/forecast",
+          category: "weather",
+          taskType: "daily-forecast",
+          success: true,
+          latencyMs: 320,
+          timestamp: "2026-03-28T17:00:00Z",
+          starScore: 5,
+          comment: "Fast and consistent forecast data."
+        }
+      ]
+    });
+  });
+
+  it("returns 404 when API details are missing", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/apis/missing-api"
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(listReportsByApiId).toHaveBeenCalledWith("missing-api");
+    expect(response.json()).toEqual({ error: "API not found" });
   });
 });

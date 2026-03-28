@@ -10,6 +10,7 @@ export interface ReportListFilters {
 export interface ReportStore {
   createReport(report: ParsedReport): Promise<StoredReport>;
   listReports(filters: ReportListFilters): Promise<StoredReport[]>;
+  listReportsByApiId(apiId: string): Promise<StoredReport[]>;
 }
 
 class InMemoryReportStore implements ReportStore {
@@ -26,6 +27,10 @@ class InMemoryReportStore implements ReportStore {
         report.category === filters.category &&
         (filters.taskType === undefined || report.taskType === filters.taskType)
     );
+  }
+
+  async listReportsByApiId(apiId: string) {
+    return this.reports.filter((report) => report.apiId === apiId);
   }
 }
 
@@ -65,6 +70,18 @@ export function createReportStore(): ReportStore {
       }
 
       const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      return (data ?? []) as StoredReport[];
+    },
+    async listReportsByApiId(apiId) {
+      const { data, error } = await supabase
+        .from("reports")
+        .select("*")
+        .eq("apiId", apiId);
 
       if (error) {
         throw error;
