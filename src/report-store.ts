@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { ParsedReport, ReportCategory } from "./reports.js";
+import { listSeededApiRecordsByCategory } from "./seeded-apis.js";
 
 export type StoredReport = ParsedReport;
 export interface ReportListFilters {
@@ -70,6 +71,20 @@ class InMemoryReportStore implements ReportStore {
   }
 
   async listRankings(filters: ReportListFilters): Promise<RankingEntry[]> {
+    if (this.reports.length === 0) {
+      return listSeededApiRecordsByCategory(filters.category).map((record) => ({
+        apiId: record.apiId,
+        provider: record.provider,
+        endpoint: record.endpoint,
+        category: record.category,
+        avgStarScore: 0,
+        reviewCount: 0,
+        successRate: 0,
+        medianLatencyMs: 0,
+        rateLimitedCount: 0
+      }));
+    }
+
     const reports = await this.listReports(filters);
     const rankings = new Map<
       string,
