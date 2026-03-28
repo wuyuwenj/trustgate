@@ -90,7 +90,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add category filtering to `GET /rankings`
 - [x] Add optional `taskType` filtering to `GET /rankings`
 - [x] Add `avgStarScore` to ranking items
-- [ ] Add `reviewCount` to ranking items
+- [x] Add `reviewCount` to ranking items
 - [ ] Add `successRate` to ranking items
 - [ ] Add `medianLatencyMs` to ranking items
 - [ ] Add `rateLimitedCount` to ranking items
