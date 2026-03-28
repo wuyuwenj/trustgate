@@ -1,5 +1,5 @@
 {
   "/_not-found/page": "/_not-found",
-  "/page": "/",
-  "/apis/[apiId]/page": "/apis/[apiId]"
+  "/apis/[apiId]/page": "/apis/[apiId]",
+  "/page": "/"
 }
