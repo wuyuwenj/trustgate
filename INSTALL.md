@@ -126,6 +126,38 @@ Get rankings:
 curl "http://localhost:3000/rankings?category=weather"
 ```
 
+Sample response:
+
+```json
+{
+  "category": "weather",
+  "items": [
+    {
+      "apiId": "open-meteo-v1-forecast",
+      "provider": "Open-Meteo",
+      "endpoint": "/v1/forecast",
+      "category": "weather",
+      "avgStarScore": 4.5,
+      "reviewCount": 2,
+      "successRate": 1,
+      "medianLatencyMs": 405,
+      "rateLimitedCount": 0
+    },
+    {
+      "apiId": "openweathermap-data-2-5-weather",
+      "provider": "OpenWeatherMap",
+      "endpoint": "/data/2.5/weather",
+      "category": "weather",
+      "avgStarScore": 3,
+      "reviewCount": 1,
+      "successRate": 0,
+      "medianLatencyMs": 890,
+      "rateLimitedCount": 1
+    }
+  ]
+}
+```
+
 Get an API profile:
 
 ```bash
