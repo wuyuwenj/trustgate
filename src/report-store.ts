@@ -132,6 +132,65 @@ function buildRankings(reports: StoredReport[]): RankingEntry[] {
     );
 }
 
+function createSeededApiDetail(apiId: string): ApiDetail | null {
+  const seededApiRecord = getSeededApiRecord(apiId);
+
+  if (!seededApiRecord) {
+    return null;
+  }
+
+  return {
+    api: {
+      apiId: seededApiRecord.apiId,
+      provider: seededApiRecord.provider,
+      endpoint: seededApiRecord.endpoint,
+      category: seededApiRecord.category,
+      avgStarScore: 0,
+      reviewCount: 0,
+      successRate: 0,
+      medianLatencyMs: 0,
+      rateLimitedCount: 0
+    },
+    reviews: []
+  };
+}
+
+function buildApiDetail(apiId: string, reports: StoredReport[]): ApiDetail | null {
+  if (reports.length === 0) {
+    return createSeededApiDetail(apiId);
+  }
+
+  const [firstReport] = reports;
+  let starScoreTotal = 0;
+  let successCount = 0;
+  let rateLimitedCount = 0;
+  const latencies: number[] = [];
+
+  for (const report of reports) {
+    starScoreTotal += report.starScore;
+    successCount += report.success ? 1 : 0;
+    rateLimitedCount += report.rateLimited ? 1 : 0;
+    latencies.push(report.latencyMs);
+  }
+
+  return {
+    api: {
+      apiId: firstReport.apiId,
+      provider: firstReport.provider,
+      endpoint: firstReport.endpoint,
+      category: firstReport.category,
+      avgStarScore: starScoreTotal / reports.length,
+      reviewCount: reports.length,
+      successRate: successCount / reports.length,
+      medianLatencyMs: calculateMedian(latencies),
+      rateLimitedCount
+    },
+    reviews: [...reports].sort((left, right) =>
+      right.timestamp.localeCompare(left.timestamp)
+    )
+  };
+}
+
 class InMemoryReportStore implements ReportStore {
   private readonly reports: StoredReport[] = [];
 
@@ -160,59 +219,7 @@ class InMemoryReportStore implements ReportStore {
 
   async getApiDetail(apiId: string): Promise<ApiDetail | null> {
     const reports = await this.listReportsByApiId(apiId);
-
-    if (reports.length === 0) {
-      const seededApiRecord = getSeededApiRecord(apiId);
-
-      if (!seededApiRecord) {
-        return null;
-      }
-
-      return {
-        api: {
-          apiId: seededApiRecord.apiId,
-          provider: seededApiRecord.provider,
-          endpoint: seededApiRecord.endpoint,
-          category: seededApiRecord.category,
-          avgStarScore: 0,
-          reviewCount: 0,
-          successRate: 0,
-          medianLatencyMs: 0,
-          rateLimitedCount: 0
-        },
-        reviews: []
-      };
-    }
-
-    const [firstReport] = reports;
-    let starScoreTotal = 0;
-    let successCount = 0;
-    let rateLimitedCount = 0;
-    const latencies: number[] = [];
-
-    for (const report of reports) {
-      starScoreTotal += report.starScore;
-      successCount += report.success ? 1 : 0;
-      rateLimitedCount += report.rateLimited ? 1 : 0;
-      latencies.push(report.latencyMs);
-    }
-
-    return {
-      api: {
-        apiId: firstReport.apiId,
-        provider: firstReport.provider,
-        endpoint: firstReport.endpoint,
-        category: firstReport.category,
-        avgStarScore: starScoreTotal / reports.length,
-        reviewCount: reports.length,
-        successRate: successCount / reports.length,
-        medianLatencyMs: calculateMedian(latencies),
-        rateLimitedCount
-      },
-      reviews: [...reports].sort((left, right) =>
-        right.timestamp.localeCompare(left.timestamp)
-      )
-    };
+    return buildApiDetail(apiId, reports);
   }
 
   async listReportsByApiId(apiId: string) {
@@ -281,8 +288,9 @@ export function createReportStore(): ReportStore {
 
       return buildRankings((data ?? []) as StoredReport[]);
     },
-    async getApiDetail(_apiId): Promise<ApiDetail | null> {
-      throw new Error("getApiDetail is not implemented");
+    async getApiDetail(apiId): Promise<ApiDetail | null> {
+      const reports = await this.listReportsByApiId(apiId);
+      return buildApiDetail(apiId, reports);
     },
     async listReportsByApiId(apiId) {
       const { data, error } = await supabase
