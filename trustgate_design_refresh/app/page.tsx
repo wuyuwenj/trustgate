@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getRankings } from "@/lib/api";
 import type { ApiCategory } from "@/types";
 
@@ -214,9 +215,10 @@ export default async function HomePage() {
                 ) : (
                   <div className="mt-6 space-y-3">
                     {section.items.map((item, index) => (
-                      <article
+                      <Link
                         key={item.apiId}
-                        className="rounded-[24px] border border-white/8 bg-black/20 px-4 py-4"
+                        href={`/apis/${encodeURIComponent(item.apiId)}`}
+                        className="block rounded-[24px] border border-white/8 bg-black/20 px-4 py-4 transition hover:border-cyan-300/30 hover:bg-black/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#050816]"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -273,7 +275,7 @@ export default async function HomePage() {
                             </p>
                           </div>
                         </div>
-                      </article>
+                      </Link>
                     ))}
                   </div>
                 )}

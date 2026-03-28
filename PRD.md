@@ -126,7 +126,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Replace the homepage hero and summary cards to describe API trust and reviews
 - [x] Render category ranking sections for `llm`, `weather`, and `data`
 - [x] Render ranking cards with `avgStarScore`, `reviewCount`, `successRate`, `medianLatencyMs`, and `rateLimitedCount`
-- [ ] Add API detail routing in the frontend
+- [x] Add API detail routing in the frontend
 - [ ] Render an API detail page with aggregate profile stats
 - [ ] Render recent reviews on the API detail page
 - [ ] Render optional provenance fields like `agentName` and `sourceType` on reviews when present
