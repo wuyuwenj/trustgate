@@ -32,6 +32,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - `GET /rankings` must support `category` and optional `taskType`
 - `GET /apis/:apiId` must return aggregate stats plus recent reviews
 - Optional provenance fields like `sourceType` and `agentName` should be stored and returned when present
+- The existing Next.js frontend in `trustgate_design_refresh` should be adapted to this product, not replaced
 
 ## Report Schema
 
@@ -117,4 +118,21 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [ ] Add a sample `POST /reports` integration snippet to `INSTALL.md`
 - [ ] Add a sample `GET /rankings` response to `INSTALL.md`
 - [ ] Add a sample `GET /apis/:apiId` response to `INSTALL.md`
+- [ ] Replace the old action-evaluation types in `trustgate_design_refresh/types` with API review types
+- [ ] Add frontend API client helpers for `GET /rankings`
+- [ ] Add frontend API client helpers for `GET /apis/:apiId`
+- [ ] Remove or stop using the old Next.js API routes for `evaluate`, `logs`, and `approve`
+- [ ] Replace the frontend homepage data flow to fetch ranking data instead of action evaluations
+- [ ] Replace the homepage hero and summary cards to describe API trust and reviews
+- [ ] Render category ranking sections for `llm`, `weather`, and `data`
+- [ ] Render ranking cards with `avgStarScore`, `reviewCount`, `successRate`, `medianLatencyMs`, and `rateLimitedCount`
+- [ ] Add API detail routing in the frontend
+- [ ] Render an API detail page with aggregate profile stats
+- [ ] Render recent reviews on the API detail page
+- [ ] Render optional provenance fields like `agentName` and `sourceType` on reviews when present
+- [ ] Add frontend loading and empty states for rankings
+- [ ] Add frontend loading and empty states for API detail pages
+- [ ] Add frontend environment configuration for the backend base URL
+- [ ] Update the frontend README with local run instructions and backend URL setup
+- [ ] Verify the frontend builds after the migration
 - [ ] Make the Vitest suite pass

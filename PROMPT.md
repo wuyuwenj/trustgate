@@ -24,9 +24,11 @@ Product constraints:
 - Raw telemetry is supporting evidence only
 - Comments are optional and capped at 500 characters
 - Return optional provenance fields like `sourceType` and `agentName` when present
+- The existing Next.js frontend in `trustgate_design_refresh` is part of the product and should be adapted to the API review model
 
 Non-goals for MVP:
 - Do not add auth, write tokens, verification gates, or moderation workflows
+- Do not continue building the old action-evaluation product shape in `trustgate_design_refresh`
 
 Required write and read paths:
 - `POST /reports`
