@@ -7,21 +7,114 @@ Build a public API trust layer where agents submit reviews after real API calls,
 ## Constraints
 
 - Deployment target: Vercel + Supabase
+- The app must still work locally without Supabase by falling back to in-memory storage
+- Design target: about `10k` reports per day
+- Traffic shape: write-heavy from agents, readable by both agents and humans
 - Categories in MVP: `llm`, `weather`, `data`
 - API identity: `provider + endpoint`
+- Open submissions are allowed in MVP
+- No auth, write token, or verification gate in MVP
+- Duplicate reports are allowed because each real API call is a valid review
 - Every report must contain an integer `starScore` from 1 to 5
 - Comments are optional and capped at 500 characters
 - Displayed rating is the average submitted `starScore`
 - Raw stats are supporting evidence only and do not directly change the displayed score
+- `rateLimited` is stored as raw evidence only
+- Scoring window is all-time for MVP
 
-## Stories
+## Product Decisions
+
+- Agents submit evidence after real API calls
+- Humans browse the aggregated rankings and reviews
+- Any agent should be able to submit a review without prior registration
+- Required write path: `POST /reports`
+- Required read paths: `GET /rankings`, `GET /apis/:apiId`
+- `GET /rankings` must support `category` and optional `taskType`
+- `GET /apis/:apiId` must return aggregate stats plus recent reviews
+- Optional provenance fields like `sourceType` and `agentName` should be stored and returned when present
+
+## Report Schema
+
+- Required:
+  - `provider`
+  - `endpoint`
+  - `category`
+  - `taskType`
+  - `success`
+  - `latencyMs`
+  - `timestamp`
+  - `starScore`
+- Optional:
+  - `rateLimited`
+  - `comment`
+  - `sourceType`
+  - `agentName`
+
+## Seed Data Targets
+
+- `llm`: OpenAI, Groq, Gemini
+- `weather`: Open-Meteo, OpenWeatherMap, NOAA weather.gov
+- `data`: CoinDesk, Nationalize.io, DataUSA
+
+## Review Rubric
+
+- `5`: strong result, low friction, clearly usable
+- `4`: good result with minor issues
+- `3`: usable but mixed or inconsistent
+- `2`: poor experience or major friction
+- `1`: failed or unusable
+
+## Tasks
 
 - [x] Bootstrap a TypeScript Fastify service with test and build tooling
-- [x] Define the review schema and normalize `apiId` from `provider + endpoint`
-- [x] Implement `POST /reports` with validation and persistence wiring
-- [x] Implement `GET /rankings` with category and optional task filtering
-- [x] Implement `GET /apis/:apiId` with aggregated stats and recent reviews
-- [ ] Add seeded data for the nine initial demo APIs
-- [ ] Add `scripts/review-api.ts` to run a real API call and submit a review
-- [ ] Make the Vitest suite pass
 - [x] Document local setup, deployment, and agent integration
+- [x] Define the review schema and normalize `apiId` from `provider + endpoint`
+- [x] Restrict `category` to the MVP enum: `llm`, `weather`, `data`
+- [x] Validate `starScore` as an integer from 1 to 5
+- [x] Validate `comment` length at 500 characters max
+- [x] Implement `POST /reports` request validation
+- [x] Add a report store abstraction
+- [x] Make the default local path use in-memory storage
+- [ ] Add a `listRankings` method to the report store interface
+- [ ] Add a `getApiDetail` method to the report store interface
+- [ ] Implement `listRankings` for the in-memory store
+- [ ] Implement `getApiDetail` for the in-memory store
+- [ ] Define the nine seeded demo API records in code
+- [ ] Return seeded ranking data when the in-memory store has no submitted reports
+- [ ] Return seeded API detail data when a seeded API has no submitted reports
+- [ ] Add a test for `GET /rankings` returning `200`
+- [ ] Add a test for `GET /rankings` returning an `items` array
+- [ ] Add a test for seeded `GET /rankings` responses with no submitted reports
+- [ ] Implement the base `GET /rankings` route using the report store
+- [ ] Add category filtering to `GET /rankings`
+- [ ] Add optional `taskType` filtering to `GET /rankings`
+- [ ] Add `avgStarScore` to ranking items
+- [ ] Add `reviewCount` to ranking items
+- [ ] Add `successRate` to ranking items
+- [ ] Add `medianLatencyMs` to ranking items
+- [ ] Add `rateLimitedCount` to ranking items
+- [ ] Sort ranking items by average star score descending by default
+- [ ] Add a test for ranking aggregation math
+- [ ] Add a test for `GET /apis/:apiId` returning `200`
+- [ ] Add a test for `GET /apis/:apiId` returning `api` and `reviews`
+- [ ] Add a test for seeded API detail responses with no submitted reports
+- [ ] Implement the base `GET /apis/:apiId` route using the report store
+- [ ] Return aggregate API profile fields from `GET /apis/:apiId`
+- [ ] Return recent reviews from `GET /apis/:apiId`
+- [ ] Return optional provenance fields in API detail review responses when present
+- [ ] Add a test for API detail aggregation
+- [ ] Add a test for recent review ordering in API detail responses
+- [ ] Add Supabase-backed `listRankings`
+- [ ] Add Supabase-backed `getApiDetail`
+- [ ] Add CLI argument parsing to `scripts/review-api.ts`
+- [ ] Add latency measurement to `scripts/review-api.ts`
+- [ ] Add success and failure classification to `scripts/review-api.ts`
+- [ ] Add star score calculation to `scripts/review-api.ts`
+- [ ] Add comment generation to `scripts/review-api.ts`
+- [ ] Add POST submission to Trustgate in `scripts/review-api.ts`
+- [ ] Add one concrete Open-Meteo review flow to `scripts/review-api.ts`
+- [ ] Add the open write API contract to `INSTALL.md`
+- [ ] Add a sample `POST /reports` integration snippet to `INSTALL.md`
+- [ ] Add a sample `GET /rankings` response to `INSTALL.md`
+- [ ] Add a sample `GET /apis/:apiId` response to `INSTALL.md`
+- [ ] Make the Vitest suite pass

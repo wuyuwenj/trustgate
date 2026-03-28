@@ -69,10 +69,22 @@ To run until Codex prints the completion marker:
 ./ralph.sh until-done
 ```
 
+To rebase against `origin/main` before each iteration when the worktree is clean:
+
+```bash
+./ralph.sh until-done rebase
+```
+
 Use dangerous mode only if you explicitly want to bypass sandboxing and approvals:
 
 ```bash
 ./ralph.sh 10 dangerous
+```
+
+You can combine the flags:
+
+```bash
+./ralph.sh until-done dangerous rebase
 ```
 
 The loop stops when Codex prints `RALPH_COMPLETE`.

@@ -3,7 +3,28 @@ set -euo pipefail
 
 MAX_ITERS="${1:-10}"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-MODE="${2:-safe}"
+MODE="safe"
+REBASE_MODE="no-rebase"
+
+if [ "$#" -ge 2 ]; then
+  shift
+
+  for arg in "$@"; do
+    case "$arg" in
+      safe|dangerous)
+        MODE="$arg"
+        ;;
+      rebase|no-rebase)
+        REBASE_MODE="$arg"
+        ;;
+      *)
+        echo "Unknown option: $arg"
+        echo "Usage: ./ralph.sh [count|until-done] [safe|dangerous] [rebase|no-rebase]"
+        exit 1
+        ;;
+    esac
+  done
+fi
 
 CODEX_ARGS=(
   --full-auto
@@ -23,11 +44,31 @@ fi
 
 cd "$ROOT"
 
+maybe_rebase() {
+  if [ "$REBASE_MODE" != "rebase" ]; then
+    return
+  fi
+
+  if [ -n "$(git status --short)" ]; then
+    echo
+    echo "-- rebase --"
+    echo "Skipping rebase because the worktree is dirty."
+    return
+  fi
+
+  echo
+  echo "-- rebase --"
+  git fetch origin
+  git rebase "origin/$(git rev-parse --abbrev-ref HEAD)"
+}
+
 run_iteration() {
   local i="$1"
 
   echo
   echo "== Ralph iteration $i =="
+
+  maybe_rebase
 
   rm -f .ralph-last.txt
 
