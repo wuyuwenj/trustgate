@@ -139,6 +139,20 @@ describe("Trustgate API", () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it("returns an items array for rankings requests", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/rankings?category=weather"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(
+      expect.objectContaining({
+        items: expect.any(Array)
+      })
+    );
+  });
+
   it("supports optional task filtering for rankings", async () => {
     const response = await app.inject({
       method: "GET",
