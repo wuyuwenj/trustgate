@@ -108,7 +108,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add Supabase-backed `listRankings`
 - [x] Add Supabase-backed `getApiDetail`
 - [x] Add CLI argument parsing to `scripts/review-api.ts`
-- [ ] Add latency measurement to `scripts/review-api.ts`
+- [x] Add latency measurement to `scripts/review-api.ts`
 - [ ] Add success and failure classification to `scripts/review-api.ts`
 - [ ] Add star score calculation to `scripts/review-api.ts`
 - [ ] Add comment generation to `scripts/review-api.ts`
