@@ -1,5 +1,9 @@
 import { pathToFileURL } from "node:url";
-import { reportCategorySchema, type ReportCategory } from "../src/reports.js";
+import {
+  reportCategorySchema,
+  type ReportCategory,
+  type ReportInput
+} from "../src/reports.js";
 
 export type ReviewCliArgs = {
   provider: string;
@@ -21,6 +25,12 @@ export type ReviewScoreInput = {
   latencyMs: number;
   rateLimited: boolean;
 };
+
+export type ReviewCommentInput = ReviewScoreInput & {
+  starScore: number;
+};
+
+const MAX_COMMENT_LENGTH = 500;
 
 const FLAG_NAMES = new Set([
   "--provider",
@@ -174,6 +184,32 @@ export function scoreReview(input: ReviewScoreInput) {
   }
 
   return 2;
+}
+
+export function generateReviewComment(input: ReviewCommentInput) {
+  let comment: string;
+
+  if (input.rateLimited) {
+    comment = "Request was rate limited before the API produced a usable result.";
+  } else if (!input.success) {
+    comment = "API call failed before returning a usable result.";
+  } else if (input.starScore >= 5) {
+    comment = "Fast successful response with a clearly usable result.";
+  } else if (input.starScore === 4) {
+    comment = "Successful response with minor latency but still usable.";
+  } else if (input.starScore === 3) {
+    comment = "Successful response, but latency was noticeable.";
+  } else {
+    comment = "API call succeeded, but latency made the experience poor.";
+  }
+
+  return comment.slice(0, MAX_COMMENT_LENGTH);
+}
+
+export function buildReviewPayload(input: ReportInput): ReportInput {
+  return {
+    ...input
+  };
 }
 
 function isMainModule() {

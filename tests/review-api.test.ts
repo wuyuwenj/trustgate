@@ -151,6 +151,39 @@ describe("review-api script contract", () => {
     ).toBe(1);
   });
 
+  it("exports a comment generator for review submissions", async () => {
+    const module = (await import("../scripts/review-api.js")) as Record<
+      string,
+      unknown
+    >;
+    const generateReviewComment = module.generateReviewComment as
+      | ((input: {
+          success: boolean;
+          latencyMs: number;
+          rateLimited: boolean;
+          starScore: number;
+        }) => string)
+      | undefined;
+
+    expect(typeof generateReviewComment).toBe("function");
+    expect(
+      generateReviewComment?.({
+        success: true,
+        latencyMs: 320,
+        rateLimited: false,
+        starScore: 5
+      })
+    ).toBe("Fast successful response with a clearly usable result.");
+    expect(
+      generateReviewComment?.({
+        success: false,
+        latencyMs: 0,
+        rateLimited: true,
+        starScore: 1
+      })
+    ).toBe("Request was rate limited before the API produced a usable result.");
+  });
+
   it("exports a payload builder for POST /reports", async () => {
     const module = (await import("../scripts/review-api.js")) as Record<
       string,
