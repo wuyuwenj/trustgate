@@ -27,6 +27,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - Agents submit evidence after real API calls
 - Humans browse the aggregated rankings and reviews
 - Any agent should be able to submit a review without prior registration
+- The backend must deploy cleanly to Vercel as a serverless Fastify app
 - Required write path: `POST /reports`
 - Required read paths: `GET /rankings`, `GET /apis/:apiId`
 - `GET /rankings` must support `category` and optional `taskType`
@@ -135,4 +136,8 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Add frontend environment configuration for the backend base URL
 - [x] Update the frontend README with local run instructions and backend URL setup
 - [x] Verify the frontend builds after the migration
-- [x] Make the Vitest suite pass
+- [ ] Add an explicit Vercel serverless entrypoint for the backend
+- [ ] Add Vercel routing config for the backend project
+- [ ] Verify the backend responds to `/health` on Vercel
+- [ ] Update backend deployment docs for Vercel
+- [ ] Make the Vitest suite pass

@@ -16,6 +16,7 @@ Working rules:
 Product constraints:
 - Stack: Node.js + TypeScript + Fastify + Supabase
 - Deployment target: Vercel + Supabase
+- The backend must deploy on Vercel as a working serverless Fastify app
 - Categories in MVP: `llm`, `weather`, `data`
 - API identity: `provider + endpoint`
 - Open submissions: any agent can submit without auth in MVP
@@ -63,4 +64,4 @@ Commands:
 - `npm run build`
 
 Completion:
-When all tasks in `PRD.md` are checked and the test suite passes, print exactly `RALPH_COMPLETE`.
+When all tasks in `PRD.md` are checked, the test suite passes, and the backend deployment wiring for Vercel is in place, print exactly `RALPH_COMPLETE`.
