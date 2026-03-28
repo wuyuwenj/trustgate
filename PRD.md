@@ -16,7 +16,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 
 ## Stories
 
-- [ ] Bootstrap a TypeScript Fastify service with test and build tooling
+- [x] Bootstrap a TypeScript Fastify service with test and build tooling
 - [ ] Define the review schema and normalize `apiId` from `provider + endpoint`
 - [ ] Implement `POST /reports` with validation and persistence wiring
 - [ ] Implement `GET /rankings` with category and optional task filtering
@@ -24,4 +24,4 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [ ] Add seeded data for the nine initial demo APIs
 - [ ] Add `scripts/review-api.ts` to run a real API call and submit a review
 - [ ] Make the Vitest suite pass
-- [ ] Document local setup, deployment, and agent integration
+- [x] Document local setup, deployment, and agent integration

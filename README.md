@@ -61,6 +61,13 @@ cat PROMPT.md | codex exec --full-auto -C . -
 ```
 
 Each successful iteration runs tests, runs the build, and creates a git commit automatically when the worktree changed.
+The loop keeps going even when tests are still failing, so Codex can make incremental progress across multiple iterations. It only stops on `RALPH_COMPLETE` after tests and build both pass.
+
+To run until Codex prints the completion marker:
+
+```bash
+./ralph.sh until-done
+```
 
 Use dangerous mode only if you explicitly want to bypass sandboxing and approvals:
 
