@@ -11,6 +11,14 @@ const categoryTitles: Record<ApiCategory, string> = {
   data: "Data APIs"
 };
 
+function formatStarScore(score: number) {
+  return `${score.toFixed(1)} / 5`;
+}
+
+function formatSuccessRate(successRate: number) {
+  return `${Math.round(successRate * 100)}%`;
+}
+
 async function loadHomepageData() {
   const rankingResponses = await Promise.allSettled(
     categories.map((category) =>
@@ -222,6 +230,48 @@ export default async function HomePage() {
                           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">
                             #{index + 1}
                           </span>
+                        </div>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Avg star score
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {formatStarScore(item.avgStarScore)}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Review count
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {item.reviewCount}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Success rate
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {formatSuccessRate(item.successRate)}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-3">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Median latency
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {item.medianLatencyMs} ms
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-white/6 bg-white/[0.02] px-3 py-3 sm:col-span-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Rate-limited calls
+                            </p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {item.rateLimitedCount}
+                            </p>
+                          </div>
                         </div>
                       </article>
                     ))}
