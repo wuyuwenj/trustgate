@@ -218,6 +218,26 @@ export default async function ApiDetailPage({ params }: ApiDetailPageProps) {
                 </div>
               </div>
 
+              {review.agentName || review.sourceType ? (
+                <div className="mt-5 rounded-2xl border border-white/6 bg-white/[0.02] px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Provenance
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {review.agentName ? (
+                      <span className="badge bg-white/[0.03] text-slate-200">
+                        Agent: {review.agentName}
+                      </span>
+                    ) : null}
+                    {review.sourceType ? (
+                      <span className="badge bg-white/[0.03] text-slate-200">
+                        Source: {review.sourceType}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
               {review.comment ? (
                 <p className="mt-5 rounded-2xl border border-white/6 bg-white/[0.02] px-4 py-4 text-sm leading-6 text-slate-300">
                   {review.comment}

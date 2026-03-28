@@ -13,7 +13,16 @@
     }
   ],
   "headers": [],
-  "dynamicRoutes": [],
+  "dynamicRoutes": [
+    {
+      "page": "/apis/[apiId]",
+      "regex": "^/apis/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPapiId": "nxtPapiId"
+      },
+      "namedRegex": "^/apis/(?<nxtPapiId>[^/]+?)(?:/)?$"
+    }
+  ],
   "staticRoutes": [
     {
       "page": "/",
