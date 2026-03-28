@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../src/app.js";
+import type { ReportStore } from "../src/report-store.js";
 import type { ParsedReport } from "../src/reports.js";
 
 describe("Trustgate API", () => {
@@ -8,19 +9,23 @@ describe("Trustgate API", () => {
   const listReports = vi.fn<
     (filters: { category: "llm" | "weather" | "data"; taskType?: string }) => Promise<ParsedReport[]>
   >();
+  const listRankings = vi.fn<ReportStore["listRankings"]>();
   const listReportsByApiId = vi.fn<(apiId: string) => Promise<ParsedReport[]>>();
 
   beforeEach(() => {
     createReport.mockReset();
     listReports.mockReset();
+    listRankings.mockReset();
     listReportsByApiId.mockReset();
     createReport.mockImplementation(async (report) => report);
     listReports.mockResolvedValue([]);
+    listRankings.mockResolvedValue([]);
     listReportsByApiId.mockResolvedValue([]);
     app = buildApp({
       reportStore: {
         createReport,
         listReports,
+        listRankings,
         listReportsByApiId
       }
     });

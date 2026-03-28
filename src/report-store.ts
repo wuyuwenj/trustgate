@@ -7,9 +7,22 @@ export interface ReportListFilters {
   taskType?: string;
 }
 
+export interface RankingEntry {
+  apiId: string;
+  provider: string;
+  endpoint: string;
+  category: ReportCategory;
+  avgStarScore: number;
+  reviewCount: number;
+  successRate: number;
+  medianLatencyMs: number;
+  rateLimitedCount: number;
+}
+
 export interface ReportStore {
   createReport(report: ParsedReport): Promise<StoredReport>;
   listReports(filters: ReportListFilters): Promise<StoredReport[]>;
+  listRankings(filters: ReportListFilters): Promise<RankingEntry[]>;
   listReportsByApiId(apiId: string): Promise<StoredReport[]>;
 }
 
@@ -27,6 +40,10 @@ class InMemoryReportStore implements ReportStore {
         report.category === filters.category &&
         (filters.taskType === undefined || report.taskType === filters.taskType)
     );
+  }
+
+  async listRankings(_filters: ReportListFilters): Promise<RankingEntry[]> {
+    throw new Error("listRankings is not implemented");
   }
 
   async listReportsByApiId(apiId: string) {
@@ -76,6 +93,9 @@ export function createReportStore(): ReportStore {
       }
 
       return (data ?? []) as StoredReport[];
+    },
+    async listRankings(_filters): Promise<RankingEntry[]> {
+      throw new Error("listRankings is not implemented");
     },
     async listReportsByApiId(apiId) {
       const { data, error } = await supabase

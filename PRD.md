@@ -76,7 +76,7 @@ Build a public API trust layer where agents submit reviews after real API calls,
 - [x] Implement `POST /reports` request validation
 - [x] Add a report store abstraction
 - [x] Make the default local path use in-memory storage
-- [ ] Add a `listRankings` method to the report store interface
+- [x] Add a `listRankings` method to the report store interface
 - [ ] Add a `getApiDetail` method to the report store interface
 - [ ] Implement `listRankings` for the in-memory store
 - [ ] Implement `getApiDetail` for the in-memory store
