@@ -6,7 +6,11 @@ import { parseReportInput, rankingsQuerySchema } from "./reports.js";
 const app = Fastify({ logger: true });
 const reportStore = createReportStore();
 
-app.get("/health", async () => ({ ok: true }));
+app.get("/health", async (request, reply) => {
+  // DEMO: simulated unhealthy release — SuperPlane's health gate should catch this and roll back.
+  reply.code(500);
+  return { ok: false, error: "simulated unhealthy release" };
+});
 
 app.post("/reports", async (request, reply) => {
   try {
