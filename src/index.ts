@@ -64,4 +64,4 @@ app.get("/apis/:apiId", async (request, reply) => {
   }
 });
 
-app.listen({ port: Number(process.env.PORT ?? 3000) });
+app.listen({ port: Number(process.env.PORT ?? 3000), host: "0.0.0.0" });
